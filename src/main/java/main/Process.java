@@ -1,6 +1,7 @@
 package main;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -50,7 +51,7 @@ public class Process {
         int totalWaiting = 0;
 
         for (Process p : processes) {
-            System.out.printf("| %-5d | %-13d | %-12d | %-15d | %-17d | %-13d |\n",
+            System.out.printf("| %-5d | %-13d | %-12d | %-16d | %-16d | %-13d |\n",
                     p.ID, p.arrivalTime, p.burstTime, p.completionTime, p.turnAroundTime, p.waitingTime);
 
             totalTurnaround += p.turnAroundTime;
@@ -64,6 +65,34 @@ public class Process {
 
         System.out.printf("Average Turnaround Time: %.2f\n", avgTurnaround);
         System.out.printf("Average Waiting Time: %.2f\n", avgWaiting);
+    }
+
+    public static List<ExecutionSlot> fcfs(List<Process> processes) {
+        ArrayList<Process> sortedProcesses = new ArrayList<>(processes);
+        sortedProcesses.sort(Comparator.comparingInt(p -> p.arrivalTime));
+
+        List<ExecutionSlot> timeline = new ArrayList<>();
+        int currentTime = 0;
+
+        for (Process process : sortedProcesses) {
+            if (currentTime < process.arrivalTime) {
+                timeline.add(new ExecutionSlot(-1, currentTime, process.arrivalTime));
+                currentTime = process.arrivalTime;
+            }
+
+            process.state = ProcessState.RUNNING;
+            int startTime = currentTime;
+            currentTime += process.burstTime;
+
+            timeline.add(new ExecutionSlot(process.getID(), startTime, currentTime));
+
+            process.setCompletionTime(currentTime);
+            process.setRemainingTime(0);
+            process.setState(ProcessState.TERMINATED);
+            process.calculateTimes();
+        }
+
+        return timeline;
     }
 
     public int getID() {
@@ -143,5 +172,58 @@ public class Process {
     public String toString() {
         return String.format("PID%d", ID);
     }
+
+    public static void displayGanttChart(List<ExecutionSlot> timeLine) {
+        System.out.println("\nGantt Chart:");
+
+        final int CELL_WIDTH = 12;
+
+        for (int i = 0; i < timeLine.size(); i++) {
+            System.out.print("+");
+            for (int j = 0; j < CELL_WIDTH; j++) {
+                System.out.print("-");
+            }
+        }
+        System.out.println("+");
+
+        for (ExecutionSlot slot : timeLine) {
+            String label = (slot.processID == -1) ? "IDLE" : "P" + slot.processID;
+
+            int cellPadding = (CELL_WIDTH - label.length());
+
+            System.out.print("| ");
+            System.out.print(label);
+
+            for (int j = 0; j < cellPadding - 1; j++) {
+                System.out.print(" ");
+            }
+        }
+
+        System.out.println("|");
+
+        for (int i = 0; i < timeLine.size(); i++) {
+            System.out.print("+");
+            for (int j = 0; j < CELL_WIDTH; j++) {
+                System.out.print("-");
+            }
+        }
+
+        System.out.println("+");
+
+        for (ExecutionSlot slot : timeLine) {
+            String timeStr = String.valueOf(slot.startTime);
+
+            System.out.print(timeStr);
+
+            int padding = CELL_WIDTH - timeStr.length() + 1;
+
+            for (int j = 0; j < padding; j++) {
+                System.out.print(" ");
+            }
+        }
+
+        System.out.println(" " + timeLine.getLast().endTime);
+    }
+
 }
 

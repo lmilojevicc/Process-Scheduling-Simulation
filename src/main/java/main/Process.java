@@ -39,6 +39,33 @@ public class Process {
         return processes;
     }
 
+    public static void displayProcessTable(List<Process> processes) {
+        System.out.println("\nProcess Table: ");
+
+        System.out.println("+-------+---------------+--------------+------------------+------------------+---------------+");
+        System.out.println("| ID    | Arrival Time  | Burst Time   | Completion Time  | Turnaround Time  | Waiting Time  |");
+        System.out.println("+-------+---------------+--------------+------------------+------------------+---------------+");
+
+        int totalTurnaround = 0;
+        int totalWaiting = 0;
+
+        for (Process p : processes) {
+            System.out.printf("| %-5d | %-13d | %-12d | %-15d | %-17d | %-13d |\n",
+                    p.ID, p.arrivalTime, p.burstTime, p.completionTime, p.turnAroundTime, p.waitingTime);
+
+            totalTurnaround += p.turnAroundTime;
+            totalWaiting += p.waitingTime;
+        }
+
+        System.out.println("+-------+---------------+--------------+-----------------+-------------------+---------------+");
+
+        double avgTurnaround = (double) totalTurnaround / processes.size();
+        double avgWaiting = (double) totalWaiting / processes.size();
+
+        System.out.printf("Average Turnaround Time: %.2f\n", avgTurnaround);
+        System.out.printf("Average Waiting Time: %.2f\n", avgWaiting);
+    }
+
     public int getID() {
         return ID;
     }

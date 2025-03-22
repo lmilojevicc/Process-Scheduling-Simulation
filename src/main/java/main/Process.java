@@ -1,6 +1,7 @@
 package main;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -29,10 +30,13 @@ public class Process {
         int arrivalTime = 0;
 
         while (arrivalTime < endTime) {
-            int burstTime = ThreadLocalRandom.current().nextInt(100, 501);
+            int numOfProcesses = ThreadLocalRandom.current().nextInt(1, 3);
+            for (int i = 0; i < numOfProcesses; i++) {
+                int burstTime = ThreadLocalRandom.current().nextInt(100, 501);
 
-            Process p = new Process(id++, arrivalTime, burstTime);
-            processes.add(p);
+                Process p = new Process(id++, arrivalTime, burstTime);
+                processes.add(p);
+            }
 
             arrivalTime += ThreadLocalRandom.current().nextInt(200, 501);
         }
@@ -90,6 +94,52 @@ public class Process {
             process.setRemainingTime(0);
             process.setState(ProcessState.TERMINATED);
             process.calculateTimes();
+        }
+
+        return timeline;
+    }
+
+    public static List<ExecutionSlot> sjfNonPreemptive(List<Process> processes) {
+        List<Process> remainingProcesses = new ArrayList<>(processes);
+        List<ExecutionSlot> timeline = new ArrayList<>();
+        int currentTime = 0;
+
+        while (!remainingProcesses.isEmpty()) {
+            List<Process> availableProcesses = new ArrayList<>();
+
+            for (Process process : remainingProcesses) {
+                if (process.arrivalTime <= currentTime) {
+                    availableProcesses.add(process);
+                }
+            }
+
+            if (availableProcesses.isEmpty()) {
+                Process nextProcess = Collections.min(remainingProcesses,
+                        Comparator.comparingInt(p -> p.arrivalTime)
+                );
+                timeline.add(
+                        new ExecutionSlot(-1, currentTime, nextProcess.arrivalTime)
+                );
+                currentTime = nextProcess.arrivalTime;
+                continue;
+            }
+
+            Process shortestJob = Collections.min(
+                    availableProcesses, Comparator.comparingInt(p -> p.burstTime)
+            );
+
+            shortestJob.setState(ProcessState.RUNNING);
+            int startTime = currentTime;
+            currentTime += shortestJob.burstTime;
+
+            timeline.add(new ExecutionSlot(shortestJob.getID(), startTime, currentTime));
+
+            shortestJob.setCompletionTime(currentTime);
+            shortestJob.setRemainingTime(0);
+            shortestJob.setState(ProcessState.TERMINATED);
+            shortestJob.calculateTimes();
+
+            remainingProcesses.remove(shortestJob);
         }
 
         return timeline;

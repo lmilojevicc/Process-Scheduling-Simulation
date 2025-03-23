@@ -210,6 +210,64 @@ public class Process {
         return timeline;
     }
 
+    public static List<ExecutionSlot> roundRobin(List<Process> processes, int quantum) {
+        List<Process> processQueue = new ArrayList<>();
+        List<Process> tempProcesses = new ArrayList<>();
+
+        for (Process p : processes) {
+            tempProcesses.add(new Process(p.ID, p.arrivalTime, p.burstTime));
+        }
+
+        tempProcesses.sort(Comparator.comparingInt(Process::getArrivalTime));
+
+        List<ExecutionSlot> timeline = new ArrayList<>();
+        int currentTime = 0;
+
+        Map<Integer, Process> originalProcessMap = new HashMap<>();
+        for (Process p : processes) {
+            originalProcessMap.put(p.ID, p);
+        }
+
+        while (!tempProcesses.isEmpty() || !processQueue.isEmpty()) {
+            while (!tempProcesses.isEmpty() && tempProcesses.getFirst().arrivalTime <= currentTime) {
+                processQueue.add(tempProcesses.removeFirst());
+            }
+
+            if (processQueue.isEmpty()) {
+                int nextArrival = tempProcesses.getFirst().arrivalTime;
+                timeline.add(new ExecutionSlot(-1, currentTime, nextArrival));
+                currentTime = nextArrival;
+                continue;
+            }
+
+            Process currentProcess = processQueue.removeFirst();
+            currentProcess.state = ProcessState.RUNNING;
+
+            int executeTime = Math.min(quantum, currentProcess.remainingTime);
+            int startTime = currentTime;
+            currentTime += executeTime;
+            currentProcess.remainingTime -= executeTime;
+
+            timeline.add(new ExecutionSlot(currentProcess.ID, startTime, currentTime));
+
+            while (!tempProcesses.isEmpty() && tempProcesses.getFirst().arrivalTime <= currentTime) {
+                processQueue.add(tempProcesses.removeFirst());
+            }
+
+            if (currentProcess.remainingTime > 0) {
+                processQueue.add(currentProcess);
+            } else {
+                Process original = originalProcessMap.get(currentProcess.ID);
+                original.completionTime = currentTime;
+                original.remainingTime = 0;
+                original.state = ProcessState.TERMINATED;
+                original.calculateTimes();
+            }
+        }
+
+        return timeline;
+    }
+
     public int getID() {
         return ID;
     }

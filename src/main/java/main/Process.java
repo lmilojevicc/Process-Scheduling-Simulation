@@ -1,9 +1,6 @@
 package main;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class Process {
@@ -140,6 +137,74 @@ public class Process {
             shortestJob.calculateTimes();
 
             remainingProcesses.remove(shortestJob);
+        }
+
+        return timeline;
+    }
+
+
+    public static List<ExecutionSlot> sjfPreemptive(List<Process> processes) {
+        List<Process> remainingProcesses = new ArrayList<>();
+        for (Process process : processes) {
+            remainingProcesses.add(new Process(process.ID, process.arrivalTime, process.burstTime));
+        }
+
+        remainingProcesses.sort(Comparator.comparingInt(Process::getArrivalTime));
+
+        List<ExecutionSlot> timeline = new ArrayList<>();
+        int currentTime = 0;
+        Process currentProcess = null;
+        int lastSwitchTime = 0;
+
+        Map<Integer, Process> originalProcessMap = new HashMap<>();
+        for (Process p : processes) {
+            originalProcessMap.put(p.getID(), p);
+        }
+
+        while (!remainingProcesses.isEmpty()) {
+            List<Process> availableProcesses = new ArrayList<>();
+            for (Process p : remainingProcesses) {
+                if (p.arrivalTime <= currentTime) {
+                    availableProcesses.add(p);
+                }
+            }
+
+            if (availableProcesses.isEmpty()) {
+                Process nextProcess = remainingProcesses.getFirst();
+                timeline.add(new ExecutionSlot(-1, currentTime, nextProcess.arrivalTime));
+                currentTime = nextProcess.arrivalTime;
+                continue;
+            }
+
+
+            Process shortestRemainingTimeProcess = Collections.min(availableProcesses,
+                    Comparator.comparingInt(Process::getRemainingTime)
+            );
+
+            if (currentProcess != shortestRemainingTimeProcess) {
+                if (currentProcess != null) {
+                    timeline.add(new ExecutionSlot(currentProcess.ID, lastSwitchTime, currentTime));
+                }
+                currentProcess = shortestRemainingTimeProcess;
+                lastSwitchTime = currentTime;
+            }
+
+            currentTime++;
+            currentProcess.remainingTime--;
+
+            if (currentProcess.remainingTime == 0) {
+                timeline.add(new ExecutionSlot(currentProcess.ID, lastSwitchTime, currentTime));
+
+                Process original = originalProcessMap.get(currentProcess.ID);
+                original.completionTime = currentTime;
+                original.remainingTime = 0;
+                original.state = ProcessState.TERMINATED;
+                original.calculateTimes();
+
+                remainingProcesses.remove(currentProcess);
+                currentProcess = null;
+                lastSwitchTime = currentTime;
+            }
         }
 
         return timeline;

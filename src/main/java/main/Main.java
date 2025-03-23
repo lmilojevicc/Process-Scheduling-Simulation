@@ -14,7 +14,7 @@ public class Main {
         List<Process> generatedProcesses = Process.generateProcesses(endTime);
         System.out.println("Created " + generatedProcesses.size() + " processes in timeframe of " + endTime / 1000 + " seconds");
 
-        List<ExecutionSlot> timeline = Process.sjfNonPreemptive(generatedProcesses);
+        List<ExecutionSlot> timeline = Process.sjfPreemptive(generatedProcesses);
         Process.displayProcessTable(generatedProcesses);
         Process.displayGanttChart(timeline);
     }
